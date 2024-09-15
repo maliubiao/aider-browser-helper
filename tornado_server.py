@@ -20,11 +20,20 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         for waiter in cls.waiters:
             waiter.write_message(message)
 
+    def on_message(self, message):
+        # Resolve the future with the received HTML response
+        for future in list(GetHtmlHandler.futures):
+            if not future.done():
+                future.set_result(message)
+
 class GetHtmlHandler(tornado.web.RequestHandler):
+    futures = set()
+
     @tornado.gen.coroutine
     def get(self):
         url = self.get_argument('url')
         future = asyncio.Future()
+        GetHtmlHandler.futures.add(future)
 
         def fetch_html():
             try:
@@ -47,7 +56,7 @@ class GetHtmlHandler(tornado.web.RequestHandler):
             self.write(f"Error: {str(e)}")
 
         # Resolve the future after receiving the response from WebSocketHandler
-        future.add_done_callback(lambda f: self.finish())
+        future.add_done_callback(lambda f: GetHtmlHandler.futures.remove(future))
 
 def make_app():
     return tornado.web.Application([
