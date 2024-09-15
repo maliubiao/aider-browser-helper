@@ -1,5 +1,6 @@
 let socket;
 let isReconnecting = false;
+let pingInterval;
 
 function connectWebSocket() {
     socket = new WebSocket('ws://localhost:8888/websocket');
@@ -40,13 +41,27 @@ function connectWebSocket() {
         if (!isReconnecting) {
             isReconnecting = true;
             console.log('WebSocket closed. Reconnecting in 5 seconds...');
+            clearInterval(pingInterval);
             setTimeout(connectWebSocket, 5000);
         }
     };
 
     socket.onerror = function(error) {
         console.error('WebSocket error:', error);
+        if (!isReconnecting) {
+            isReconnecting = true;
+            console.log('WebSocket error detected. Reconnecting in 5 seconds...');
+            clearInterval(pingInterval);
+            setTimeout(connectWebSocket, 5000);
+        }
     };
+
+    // Start pinging the server to detect errors
+    pingInterval = setInterval(() => {
+        if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: 'ping' }));
+        }
+    }, 3000);
 }
 
 function sendResponse(futureId, html) {
