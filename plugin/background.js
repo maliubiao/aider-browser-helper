@@ -3,9 +3,9 @@ let isReconnecting = false;
 let pingInterval;
 
 /**
- * Initializes the WebSocket connection.
+ * 初始化 WebSocket 连接。
  */
-function initializeWebSocket() {
+async function initializeWebSocket() {
     socket = new WebSocket('ws://localhost:8888/websocket');
     socket.onmessage = handleWebSocketMessage;
     socket.onclose = handleWebSocketClose;
@@ -14,71 +14,73 @@ function initializeWebSocket() {
 }
 
 /**
- * Handles incoming WebSocket messages.
- * @param {MessageEvent} event - The WebSocket message event.
+ * 处理传入的 WebSocket 消息。
+ * @param {MessageEvent} event - WebSocket 消息事件。
  */
-function handleWebSocketMessage(event) {
+async function handleWebSocketMessage(event) {
     const data = JSON.parse(event.data);
     const url = data.url;
     const futureId = data.future_id;
 
-    chrome.tabs.create({ url: url }, function(tab) {
-        const tabId = tab.id;
+    const tab = await new Promise((resolve) => {
+        chrome.tabs.create({ url: url }, resolve);
+    });
 
-        const fetchTimeout = setTimeout(() => {
-            chrome.tabs.remove(tabId);
-            sendResponse(futureId, null);
-        }, 5000);
+    const tabId = tab.id;
 
-        chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
-            if (updatedTabId === tabId && changeInfo.status === 'complete') {
-                chrome.tabs.onUpdated.removeListener(listener);
-                clearTimeout(fetchTimeout);
+    const fetchTimeout = setTimeout(() => {
+        chrome.tabs.remove(tabId);
+        sendResponse(futureId, null);
+    }, 5000);
 
-                chrome.tabs.executeScript(tabId, { code: 'document.documentElement.outerHTML' }, function(result) {
-                    const html = result[0];
-                    chrome.tabs.remove(tabId);
-                    sendResponse(futureId, html);
-                });
-            }
-        });
+    chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
+        if (updatedTabId === tabId && changeInfo.status === 'complete') {
+            chrome.tabs.onUpdated.removeListener(listener);
+            clearTimeout(fetchTimeout);
+
+            chrome.tabs.executeScript(tabId, { code: 'document.documentElement.outerHTML' }, function(result) {
+                const html = result[0];
+                chrome.tabs.remove(tabId);
+                sendResponse(futureId, html);
+            });
+        }
     });
 }
 
 /**
- * Handles WebSocket closure.
- * @param {CloseEvent} event - The WebSocket close event.
+ * 处理 WebSocket 关闭。
+ * @param {CloseEvent} event - WebSocket 关闭事件。
  */
-function handleWebSocketClose(event) {
+async function handleWebSocketClose(event) {
     if (!isReconnecting) {
         isReconnecting = true;
-        console.log('WebSocket closed. Reconnecting in 5 seconds...');
+        console.log('WebSocket 已关闭。5 秒后重新连接...');
         clearInterval(pingInterval);
         setTimeout(initializeWebSocket, 5000);
     }
 }
 
 /**
- * Handles WebSocket errors.
- * @param {Event} error - The WebSocket error event.
+ * 处理 WebSocket 错误。
+ * @param {Event} error - WebSocket 错误事件。
  */
-function handleWebSocketError(error) {
-    console.error('WebSocket error:', error);
+async function handleWebSocketError(error) {
+    console.error('WebSocket 错误:', error);
     if (!isReconnecting) {
         isReconnecting = true;
-        console.log('WebSocket error detected. Reconnecting in 5 seconds...');
+        console.log('检测到 WebSocket 错误。5 秒后重新连接...');
         clearInterval(pingInterval);
         setTimeout(initializeWebSocket, 5000);
     }
 }
 
 /**
- * Starts the ping interval to detect errors.
+ * 启动 ping 间隔以检测错误。
  */
 function startPingInterval() {
     pingInterval = setInterval(() => {
         if (socket.readyState !== WebSocket.OPEN) {
-            console.log('WebSocket is not open. Reconnecting...');
+            console.log('WebSocket 未打开。重新连接...');
             clearInterval(pingInterval);
             initializeWebSocket();
         } else {
@@ -88,15 +90,15 @@ function startPingInterval() {
 }
 
 /**
- * Sends the response back to the server via WebSocket.
- * @param {string} futureId - The unique ID of the future.
- * @param {string} html - The HTML content to send.
+ * 通过 WebSocket 将响应发送回服务器。
+ * @param {string} futureId - 未来的唯一 ID。
+ * @param {string} html - 要发送的 HTML 内容。
  */
 function sendResponse(futureId, html) {
     if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ future_id: futureId, html: html }));
     } else {
-        console.error('WebSocket is not open. Cannot send response.');
+        console.error('WebSocket 未打开。无法发送响应。');
     }
 }
 
