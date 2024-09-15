@@ -40,7 +40,10 @@ async function handleWebSocketMessage(event) {
 
             const result = await chrome.scripting.executeScript({
                 target: { tabId: tabId },
-                func: () => document.documentElement.outerHTML
+                func: () => {
+                    document.title = "由aider加载: " + document.title;
+                    return document.documentElement.outerHTML;
+                }
             });
             const html = result[0].result;
             chrome.tabs.remove(tabId);
