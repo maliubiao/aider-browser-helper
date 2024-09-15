@@ -26,22 +26,22 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         # Resolve the future with the received HTML response
         message_data = json.loads(message)
         future_id = message_data.get('future_id')
-        for future in list(GetHtmlHandler.futures):
-            if not future.done() and future.id == future_id:
-                future.set_result(message_data.get('html'))
+        future = GetHtmlHandler.futures.get(future_id)
+        if future and not future.done():
+            future.set_result(message_data.get('html'))
 
 
 class GetHtmlHandler(tornado.web.RequestHandler):
-    futures = set()
+    futures = {}
 
     @tornado.gen.coroutine
     def get(self):
         url = self.get_argument('url')
         future = asyncio.Future()
-        future.id = str(uuid.uuid4())  # Assign a unique ID to the future
-        GetHtmlHandler.futures.add(future)
+        future_id = str(uuid.uuid4())  # Assign a unique ID to the future
+        GetHtmlHandler.futures[future_id] = future
 
-        WebSocketHandler.send_message(json.dumps({'url': url, 'future_id': future.id}))
+        WebSocketHandler.send_message(json.dumps({'url': url, 'future_id': future_id}))
 
         try:
             html = yield tornado.gen.with_timeout(datetime.timedelta(milliseconds=5000), future)
@@ -54,7 +54,7 @@ class GetHtmlHandler(tornado.web.RequestHandler):
             self.write(f"Error: {str(e)}")
 
         # Resolve the future after receiving the response from WebSocketHandler
-        future.add_done_callback(lambda f: GetHtmlHandler.futures.remove(future))
+        future.add_done_callback(lambda f: GetHtmlHandler.futures.pop(future_id, None))
 
 
 def make_app():
