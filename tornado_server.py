@@ -1,9 +1,24 @@
 import tornado.ioloop
 import tornado.web
 import tornado.gen
+import tornado.websocket
 import asyncio
 import requests
 import datetime
+
+class WebSocketHandler(tornado.websocket.WebSocketHandler):
+    waiters = set()
+
+    def open(self):
+        WebSocketHandler.waiters.add(self)
+
+    def on_close(self):
+        WebSocketHandler.waiters.remove(self)
+
+    @classmethod
+    def send_message(cls, message):
+        for waiter in cls.waiters:
+            waiter.write_message(message)
 
 class GetHtmlHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
@@ -13,9 +28,9 @@ class GetHtmlHandler(tornado.web.RequestHandler):
 
         def fetch_html():
             try:
-                response = requests.get(url)
-                response.raise_for_status()
-                future.set_result(response.text)
+                WebSocketHandler.send_message(url)
+                response = yield tornado.gen.with_timeout(datetime.timedelta(milliseconds=5000), future)
+                future.set_result(response)
             except Exception as e:
                 future.set_exception(e)
 
@@ -34,6 +49,7 @@ class GetHtmlHandler(tornado.web.RequestHandler):
 def make_app():
     return tornado.web.Application([
         (r"/get_html", GetHtmlHandler),
+        (r"/websocket", WebSocketHandler),
     ])
 
 if __name__ == "__main__":
