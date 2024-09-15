@@ -30,6 +30,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             if not future.done() and future.id == future_id:
                 future.set_result(message_data.get('html'))
 
+
 class GetHtmlHandler(tornado.web.RequestHandler):
     futures = set()
 
@@ -40,15 +41,7 @@ class GetHtmlHandler(tornado.web.RequestHandler):
         future.id = str(uuid.uuid4())  # Assign a unique ID to the future
         GetHtmlHandler.futures.add(future)
 
-        def fetch_html():
-            try:
-                WebSocketHandler.send_message(json.dumps({'url': url, 'future_id': future.id}))
-                response = yield tornado.gen.with_timeout(datetime.timedelta(milliseconds=5000), future)
-                future.set_result(response)
-            except Exception as e:
-                future.set_exception(e)
-
-        tornado.ioloop.IOLoop.current().add_callback(fetch_html)
+        WebSocketHandler.send_message(json.dumps({'url': url, 'future_id': future.id}))
 
         try:
             html = yield tornado.gen.with_timeout(datetime.timedelta(milliseconds=5000), future)
@@ -63,6 +56,7 @@ class GetHtmlHandler(tornado.web.RequestHandler):
         # Resolve the future after receiving the response from WebSocketHandler
         future.add_done_callback(lambda f: GetHtmlHandler.futures.remove(future))
 
+
 def make_app():
     return tornado.web.Application([
         (r"/get_html", GetHtmlHandler),
@@ -73,3 +67,4 @@ if __name__ == "__main__":
     app = make_app()
     app.listen(8888)
     tornado.ioloop.IOLoop.current().start()
+
