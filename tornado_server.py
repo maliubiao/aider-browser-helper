@@ -46,6 +46,9 @@ class GetHtmlHandler(tornado.web.RequestHandler):
             self.set_status(500)
             self.write(f"Error: {str(e)}")
 
+        # Resolve the future after receiving the response from WebSocketHandler
+        future.add_done_callback(lambda f: self.finish())
+
 def make_app():
     return tornado.web.Application([
         (r"/get_html", GetHtmlHandler),
