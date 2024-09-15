@@ -38,11 +38,13 @@ async function handleWebSocketMessage(event) {
             chrome.tabs.onUpdated.removeListener(listener);
             clearTimeout(fetchTimeout);
 
-            chrome.tabs.executeScript(tabId, { code: 'document.documentElement.outerHTML' }, function(result) {
-                const html = result[0];
-                chrome.tabs.remove(tabId);
-                sendResponse(futureId, html);
+            const result = await chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                func: () => document.documentElement.outerHTML
             });
+            const html = result[0].result;
+            chrome.tabs.remove(tabId);
+            sendResponse(futureId, html);
         }
     });
 }
