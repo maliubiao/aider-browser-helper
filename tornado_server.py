@@ -45,7 +45,7 @@ class GetHtmlHandler(tornado.web.RequestHandler):
 
         try:
             html = yield tornado.gen.with_timeout(datetime.timedelta(milliseconds=5000), future)
-            self.write(html)
+            self.write(f"<!DOCTYPE html>{html}")
         except tornado.gen.TimeoutError:
             self.set_status(504)
             self.write("Request timed out")

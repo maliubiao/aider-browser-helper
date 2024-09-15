@@ -58,7 +58,11 @@ function connectWebSocket() {
 
     // Start pinging the server to detect errors
     pingInterval = setInterval(() => {
-        if (socket.readyState === WebSocket.OPEN) {
+        if (socket.readyState !== WebSocket.OPEN) {
+            console.log('WebSocket is not open. Reconnecting...');
+            clearInterval(pingInterval);
+            connectWebSocket();
+        } else {
             socket.send(JSON.stringify({ type: 'ping' }));
         }
     }, 3000);
