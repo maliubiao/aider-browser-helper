@@ -5,6 +5,8 @@ import tornado.websocket
 import asyncio
 import requests
 import datetime
+import json
+import uuid
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     waiters = set()
@@ -22,9 +24,11 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def on_message(self, message):
         # Resolve the future with the received HTML response
+        message_data = json.loads(message)
+        future_id = message_data.get('future_id')
         for future in list(GetHtmlHandler.futures):
-            if not future.done():
-                future.set_result(message)
+            if not future.done() and future.id == future_id:
+                future.set_result(message_data.get('html'))
 
 class GetHtmlHandler(tornado.web.RequestHandler):
     futures = set()
@@ -33,11 +37,12 @@ class GetHtmlHandler(tornado.web.RequestHandler):
     def get(self):
         url = self.get_argument('url')
         future = asyncio.Future()
+        future.id = str(uuid.uuid4())  # Assign a unique ID to the future
         GetHtmlHandler.futures.add(future)
 
         def fetch_html():
             try:
-                WebSocketHandler.send_message(url)
+                WebSocketHandler.send_message(json.dumps({'url': url, 'future_id': future.id}))
                 response = yield tornado.gen.with_timeout(datetime.timedelta(milliseconds=5000), future)
                 future.set_result(response)
             except Exception as e:
