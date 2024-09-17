@@ -17,6 +17,8 @@ async function initializeWebSocket() {
  * 处理传入的 WebSocket 消息。
  * @param {MessageEvent} event - WebSocket 消息事件。
  */
+let requestList = [];
+
 async function handleWebSocketMessage(event) {
     const data = JSON.parse(event.data);
     const url = data.url;
@@ -33,7 +35,7 @@ async function handleWebSocketMessage(event) {
         sendResponse(futureId, null);
     }, 5000);
 
-    chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
+    chrome.tabs.onUpdated.addListener(async function listener(updatedTabId, changeInfo) {
         if (updatedTabId === tabId && changeInfo.status === 'complete') {
             chrome.tabs.onUpdated.removeListener(listener);
             clearTimeout(fetchTimeout);
@@ -44,12 +46,27 @@ async function handleWebSocketMessage(event) {
                     document.title = "由aider加载: " + document.title;
                     return document.documentElement.outerHTML;
                 },
-                runAt: 'document_idle'
             });
             const html = result[0].result;
             chrome.tabs.remove(tabId);
             sendResponse(futureId, html);
+
+            // Add the URL and time to the request list
+            const now = new Date();
+            const timeString = now.toLocaleString();
+            requestList.unshift({ url, time: timeString });
+            updateRequestList();
         }
+    });
+}
+
+function updateRequestList() {
+    const listElement = document.getElementById('request-list');
+    listElement.innerHTML = '';
+    requestList.forEach(request => {
+        const li = document.createElement('li');
+        li.textContent = `${request.time} - ${request.url}`;
+        listElement.appendChild(li);
     });
 }
 
