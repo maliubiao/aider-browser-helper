@@ -44,7 +44,7 @@ async function handleWebSocketMessage(event) {
                     document.title = "由aider加载: " + document.title;
                     return document.documentElement.outerHTML;
                 },
-                runAt: 'document_end'
+                runAt: 'document_idle'
             });
             const html = result[0].result;
             chrome.tabs.remove(tabId);
