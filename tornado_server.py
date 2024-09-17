@@ -2,6 +2,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.gen
 import tornado.websocket
+import tornado.options
 import asyncio
 import requests
 import datetime
@@ -71,7 +72,11 @@ def make_app():
     ])
 
 if __name__ == "__main__":
+    tornado.options.define("port", default=8888, help="Port to listen on")
+    tornado.options.define("address", default="localhost", help="Address to bind to")
+    tornado.options.parse_command_line()
+
     app = make_app()
-    app.listen(8888)
+    app.listen(tornado.options.options.port, address=tornado.options.options.address)
     tornado.ioloop.IOLoop.current().start()
 
