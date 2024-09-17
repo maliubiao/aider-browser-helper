@@ -13,6 +13,6 @@
         "scripting"
     ],
     "host_permissions": [
-        "http://localhost:8888/*"
+        "<all_urls>"
     ]
 }
