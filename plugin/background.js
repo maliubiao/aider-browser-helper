@@ -126,3 +126,8 @@ function sendResponse(futureId, html) {
 }
 
 initializeWebSocket();
+
+// Move the content of the <script> tag from index.html to background.js
+document.getElementById('clear-list').addEventListener('click', function() {
+    document.getElementById('request-list').innerHTML = '';
+});
