@@ -5,9 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Background Script</title>
     <script src="background.js"></script>
+    <style>
+        #request-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        #request-list li {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+        }
+    </style>
 </head>
 <body>
-    <h1>Background Script</h1>
-    <p>This page is used to run the background script.</p>
+    <h1>aider url fetcher</h1>
+    <ul id="request-list"></ul>
+    <button id="clear-list">Clear List</button>
+    <script>
+        document.getElementById('clear-list').addEventListener('click', function() {
+            document.getElementById('request-list').innerHTML = '';
+        });
+    </script>
 </body>
 </html>
