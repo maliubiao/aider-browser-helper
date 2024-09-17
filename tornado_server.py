@@ -43,7 +43,12 @@ class GetHtmlHandler(tornado.web.RequestHandler):
         future_id = str(uuid.uuid4())  # Assign a unique ID to the future
         GetHtmlHandler.futures[future_id] = future
 
-        WebSocketHandler.send_message(json.dumps({'url': url, 'future_id': future_id}))
+        if WebSocketHandler.waiters:
+            WebSocketHandler.send_message(json.dumps({'url': url, 'future_id': future_id}))
+        else:
+            self.set_status(503)
+            self.write("Error: No WebSocket clients available to process the request")
+            return
 
         try:
             html = yield tornado.gen.with_timeout(datetime.timedelta(milliseconds=5000), future)
