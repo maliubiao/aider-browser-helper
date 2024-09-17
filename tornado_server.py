@@ -34,8 +34,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             future.set_result(message_data.get('html'))
 
     def check_origin(self, origin):
-        allowed_origins = ["http://localhost:8888"]
-        return origin in allowed_origins
+        return True
 
 
 class GetHtmlHandler(tornado.web.RequestHandler):
