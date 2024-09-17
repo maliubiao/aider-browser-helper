@@ -13,9 +13,11 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def open(self):
         WebSocketHandler.waiters.add(self)
+        print(f"Client connected: {self.request.remote_ip}")
 
     def on_close(self):
         WebSocketHandler.waiters.remove(self)
+        print(f"Client disconnected: {self.request.remote_ip}")
 
     @classmethod
     def send_message(cls, message):
